@@ -56,7 +56,7 @@ usage: rflm_script.py [-h] [-i filename] [-o identifier] [-v level] [-m value]
 
     Column 1:       Stress range
     Column 2:       Runout parameter (1 for runout, 0 for no runout)
-    Column 3:       Number of cycles to failure
+    Column 3:       Number of cycles to failure or runout
 
     The filename of the text file shall NOT end in .mat
 

@@ -148,7 +148,7 @@ class RFLM5():
         self.β0, self.β1, self.σ, self.μ_γ, self.σ_γ, self.a_lsq, self.m_lsq = θ
      
     
-    def compute_quantile(self, q:float, ΔSmax:float=300, force:bool=False):
+    def compute_quantile(self, q:float, ΔSmax:float=300, force:bool=False, npts=40):
         """Computes the q-fractile curve of the RFLM fit
 
         Args:
@@ -160,12 +160,12 @@ class RFLM5():
         """
         θ = [β0, β1, σ, μ_γ, σ_γ] = self.β0, self.β1, self.σ, self.μ_γ, self.σ_γ
       
-        if not np.all(θ):
+        if None in θ: #not np.all(θ):
             print("Need to fit the data using the fit function")
             return 
         
         # Establish the curves at the relavent probability level
-        x = np.linspace(μ_γ-3*σ_γ, np.log(ΔSmax), 40)
+        x = np.linspace(μ_γ-3*σ_γ, np.log(ΔSmax), npts)
         n = np.zeros(x.size)
 
         if q in self.quantile:
@@ -177,9 +177,13 @@ class RFLM5():
             try:
                 wj = opt.brentq(quantile_function(q, xj, θ), -100, 1000) 
                 n[j] = np.exp(wj)
+                # check that is sufficiently converged
+                if np.abs(F_W(wj, xj, β0, β1, σ, μ_γ, σ_γ) - q) > q*0.05:
+                    wj = np.nan #np.inf 
+                    n[j] = np.nan #np.inf             
             except:
-                wj = np.inf 
-                n[j] = np.inf 
+                wj = np.nan #np.inf 
+                n[j] = np.nan #np.inf 
             finally:
                 if RFLM5.__verbosity == 1:
                     print(f"ΔS: {np.exp(xj):.1f}:  N: {n[j]:.0f}, F_W: {F_W(wj, xj, β0, β1, σ, μ_γ, σ_γ)}")                                    
@@ -210,7 +214,7 @@ class RFLM5():
         θ = [β0, β1, σ, μ_γ, σ_γ] = self.β0, self.β1, self.σ, self.μ_γ, self.σ_γ
         a, m = self.a_lsq, self.m_lsq
         
-        if not np.all(θ):
+        if None in θ: #not np.all(θ):
             print("Need to fit the data using the fit function")
             return 
                                               
@@ -223,7 +227,7 @@ class RFLM5():
                     [s, n] = self.quantile[qi]                
                 except: 
                     print(f"q={qi} not computed. Computing using compute_quantile.")
-                    self.compute_quantile(qi, ΔSmax)
+                    self.compute_quantile(qi, ΔSmax, npts=npts)
                     
                 [s, n] = self.quantile[qi]                
                 ax.plot(n, s, label=f"RFLM (q={qi})", lw=2)
@@ -244,7 +248,7 @@ class RFLM5():
         ax.grid(which="both")    
         ax.legend(loc=0)
         if nlim is not None: ax.set_xlim(*nlim)
-        if slim is not None: ax.set_xlim(*slim)
+        if slim is not None: ax.set_ylim(*slim)
         ax.legend(loc=0)
         ax.set_title(f"β0={β0:.3f}; β1={β1:.3f}; σ={σ:.3f}; μ_γ={μ_γ:.3f}; σ_γ={σ_γ:.3f}")
         if filename is not None:
