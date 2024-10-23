@@ -314,9 +314,9 @@ class RFLM5():
         x = np.log(ΔS)
         w = np.log(N)
         ε = 1E-300
-        return -np.sum([δ*np.log(max(f_W(wi, xi, β0, β1, σ, μ_γ, σ_γ),ε)) + 
-                            (1-δ)*np.log(max(1-F_W(wi, xi, β0, β1, σ, μ_γ, σ_γ),ε)) 
-                            for wi, xi in zip(w,x)])
+        return -np.sum([δi*np.log(max(f_W(wi, xi, β0, β1, σ, μ_γ, σ_γ),ε)) + 
+                            (1-δi)*np.log(max(1-F_W(wi, xi, β0, β1, σ, μ_γ, σ_γ),ε)) 
+                            for wi, xi, δi in zip(w,x,δ)])
         
 
     
@@ -367,9 +367,12 @@ class RFLM5():
             β0, β1, σ, μ_γ, σ_γ = θ
             ε = 1E-300
             if RFLM5.__verbosity == 1: print(θ)
-            return -np.sum([δ*np.log(max(f_W(wi, xi, β0, β1, σ, μ_γ, σ_γ),ε)) + 
-                            (1-δ)*np.log(max(1-F_W(wi, xi, β0, β1, σ, μ_γ, σ_γ),ε)) 
-                            for wi, xi in zip(w,x)])
+            return -np.sum([δi*np.log(max(f_W(wi, xi, β0, β1, σ, μ_γ, σ_γ),ε)) + 
+                            (1-δi)*np.log(max(1-F_W(wi, xi, β0, β1, σ, μ_γ, σ_γ),ε)) 
+                            for wi, xi, δi in zip(w,x,δ)])
+            #return -np.sum([δi*np.log(max(f_W2(wi, xi, β0, β1, σ, μ_γ, σ_γ),ε)) + 
+            #                (1-δi)*np.log(max(1-F_W2(wi, xi, β0, β1, σ, μ_γ, σ_γ),ε)) 
+            #                for wi, xi, δi in zip(w,x,δ)])
 
         # define some constraints: expression >= 0
         constraints = [
