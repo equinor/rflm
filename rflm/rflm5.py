@@ -10,16 +10,19 @@ from .opt import optimize_wrapper, adjust_constraints
 # integrands for pdf and cdf
 μ = lambda v, x, β0, β1: β0+β1*np.log(np.exp(x)-np.exp(v))
 f_W_integrand2 = lambda v, w, x, β0, β1, σ, μ_γ, σ_γ: \
-    1/(σ*σ_γ)*norm.pdf(w, loc=μ(v, x, β0, β1), scale=σ)*norm.pdf(v, loc=μ_γ, scale=σ_γ)
+    1/(σ*σ_γ)*norm.pdf((w-μ(v, x, β0, β1))/σ)*norm.pdf((v-μ_γ)/σ_γ)
 F_W_integrand2 = lambda v, w, x, β0, β1, σ, μ_γ, σ_γ: \
-    1/σ_γ*norm.cdf(w, loc=μ(v, x, β0, β1), scale=σ)*norm.pdf(v, loc=μ_γ, scale=σ_γ)
+    1/σ_γ*norm.cdf((w-μ(v, x, β0, β1))/σ)*norm.pdf((v-μ_γ)/σ_γ)
 f_W_integrand = lambda v, w, x, β0, β1, σ, μ_γ, σ_γ: \
     norm.pdf(w, loc=μ(v, x, β0, β1), scale=σ)*norm.pdf(v, loc=μ_γ, scale=σ_γ)
 F_W_integrand = lambda v, w, x, β0, β1, σ, μ_γ, σ_γ: \
     norm.cdf(w, loc=μ(v, x, β0, β1), scale=σ)*norm.pdf(v, loc=μ_γ, scale=σ_γ)
 
 # pdf and cdf (generated using gauss quadrature)
-f_V = lambda v, μ_γ, σ_γ: norm.pdf(v, loc=μ_γ, scale=σ_γ)
+# Note that f_V is not used but is correct as per the paper
+# The paper refers to the standard normal distribution. To represent f_V as in the paper
+# we could have written f_V = lambda v, μ_γ, σ_γ: 1/σ_γ*norm.pdf((v-μ_γ)/σ_γ, loc=0, scale=1) 
+f_V = lambda v, μ_γ, σ_γ: norm.pdf(v, loc=μ_γ, scale=σ_γ) 
 f_W = lambda w, x, β0, β1, σ, μ_γ, σ_γ: quad(f_W_integrand, -np.inf, x, args=(w, x, β0, β1, σ, μ_γ, σ_γ))[0]                      
 F_W = lambda w, x, β0, β1, σ, μ_γ, σ_γ: quad(F_W_integrand, -np.inf, x, args=(w, x, β0, β1, σ, μ_γ, σ_γ))[0]
 f_W2 = lambda w, x, β0, β1, σ, μ_γ, σ_γ: quad(f_W_integrand2, -np.inf, x, args=(w, x, β0, β1, σ, μ_γ, σ_γ))[0]                      
@@ -318,7 +321,6 @@ class RFLM5():
                             (1-δi)*np.log(max(1-F_W(wi, xi, β0, β1, σ, μ_γ, σ_γ),ε)) 
                             for wi, xi, δi in zip(w,x,δ)])
         
-
     
     @staticmethod
     def __regression(ΔS:np.ndarray, δ:np.ndarray, N:np.ndarray, m:float=None):
@@ -366,7 +368,8 @@ class RFLM5():
         def negative_log_likelihood_function(θ, w, x, δ):
             β0, β1, σ, μ_γ, σ_γ = θ
             ε = 1E-300
-            if RFLM5.__verbosity == 1: print(θ)
+            if RFLM5.__verbosity == 1: print(θ)      
+            # Both these forms should be identical
             return -np.sum([δi*np.log(max(f_W(wi, xi, β0, β1, σ, μ_γ, σ_γ),ε)) + 
                             (1-δi)*np.log(max(1-F_W(wi, xi, β0, β1, σ, μ_γ, σ_γ),ε)) 
                             for wi, xi, δi in zip(w,x,δ)])
