@@ -47,7 +47,21 @@ class RFLM5():
             Random Fatigue-Limit Model, Sixth Annual Spring Research Conference
             Minneapolis, Minnesota, June 2–4, 1999
 
+            The model is 
+            
+                log(N) = β0 + β1.log(ΔS-γ)
+                
+            where the N and ΔS and the number of cycles to failure and the stress range, and γ is the fatigue limit.
+            The parameters of the model are  
+            
+                β0: y-intercept of in the log-space
+                β1: slope of SN-curve in the log-space
+                σ: standard deviation of the log(N) data 
+                μ_γ: expected fatigue limit in the log-space
+                σ_γ: standard deviation of the fatigue limit in the log-space           
+
         Args:
+            ΔS  (np.ndarray, optional): Stress ranges. Defaults to None
             runout_bool (np.ndarray, optional): Runout parameter (1 for runout, 0 for no runout). Defaults to None.
             N (np.ndarray, optional): Number of cycles to failure. Defaults to None.
             m (float, optional): Fixed slope of SN-curve. Defaults to None.
@@ -85,6 +99,43 @@ class RFLM5():
             self.N = N    
             self.data_set = True
             
+          
+    @property
+    def params(self):
+        """ 
+        Returns a list of the parameters for the model log(N) = β0 + β1.log(ΔS-γ)
+        The parameters returned are:
+            β0: y-intercept of in the log-space
+            β1: slope of SN-curve in the log-space
+            σ: standard deviation of the log(N) data 
+            μ_γ: expected fatigue limit in the log-space
+            σ_γ: standard deviation of the fatigue limit in the log-space
+            a: from least squared fitted N=a(ΔS)^(-m)
+            m: from least squared fitted N=a(ΔS)^(-m)
+        """
+        return [self.β0, self.β1, self.σ, self.μ_γ, self.σ_γ, self.a_lsq, self.m_lsq]
+        
+    
+    @params.setter
+    def params(self, values):
+        """ 
+        Sets the parameters for the model log(N) = β0 + β1.log(ΔS-γ)
+        The parameters should be provided in list of values with entries:
+            β0: y-intercept of in the log-space
+            β1: slope of SN-curve in the log-space
+            σ: standard deviation of the log(N) data 
+            μ_γ: expected fatigue limit in the log-space
+            σ_γ: standard deviation of the fatigue limit in the log-space
+            a: from least squared fitted N=a(ΔS)^(-m)
+            m: from least squared fitted N=a(ΔS)^(-m)
+        The last two entries are optional. 
+        """
+        if len(values) == 7:
+            self.β0, self.β1, self.σ, self.μ_γ, self.σ_γ, self.a_lsq, self.m_lsq = values
+        elif len(values) == 5:
+            self.β0, self.β1, self.σ, self.μ_γ, self.σ_γ = values
+        else:
+            raise IndexError("Expected a list of 5 or 7 entries")
         
     def read_test_data(self, filepath: str):
         """
@@ -151,7 +202,18 @@ class RFLM5():
         self.β0, self.β1, self.σ, self.μ_γ, self.σ_γ, self.a_lsq, self.m_lsq = θ
      
     
-    def compute_quantile(self, q:float, ΔSmax:float=300, force:bool=False, npts=40):
+    def get_stress(self, q:float, N, params=None):
+        """ A fast (evidently) approximate method to compute the stress from N """
+        if params is None:
+            θ = [β0, β1, σ, μ_γ, σ_γ] = self.β0, self.β1, self.σ, self.μ_γ, self.σ_γ
+        else:
+            θ = [β0, β1, σ, μ_γ, σ_γ] = params
+        γ = np.exp(norm.ppf(q, loc=μ_γ, scale=σ_γ))
+        ΔS = np.exp(1/β1*(np.log(N)-β0)) + γ   
+        return ΔS
+    
+    
+    def compute_quantile(self, q:float, ΔSmax:float=300, force:bool=False, npts=40, params=None):
         """Computes the q-fractile curve of the RFLM fit
 
         Args:
@@ -161,20 +223,25 @@ class RFLM5():
                 routine will not recompute the curve. Default to False. Set to True to force recomputation.
 
         """
-        θ = [β0, β1, σ, μ_γ, σ_γ] = self.β0, self.β1, self.σ, self.μ_γ, self.σ_γ
+        if params is None:
+            θ = [β0, β1, σ, μ_γ, σ_γ] = self.β0, self.β1, self.σ, self.μ_γ, self.σ_γ
+        else:
+            θ = [β0, β1, σ, μ_γ, σ_γ] = params
       
         if None in θ: #not np.all(θ):
             print("Need to fit the data using the fit function")
             return 
         
         # Establish the curves at the relavent probability level
-        x = np.linspace(μ_γ-3*σ_γ, np.log(ΔSmax), npts)
+        x_min = norm.ppf(q*1.001, loc=μ_γ, scale=σ_γ) 
+        x = np.linspace(x_min, np.log(ΔSmax), npts)
         n = np.zeros(x.size)
 
-        if q in self.quantile:
-            if not force: 
-                print(f"quantile q={q} already computed. To force a recompute set force=True")
-                return # quantile already computed. 
+        if params is None:
+            if q in self.quantile:
+                if not force: 
+                    print(f"quantile q={q} already computed. To force a recompute set force=True")
+                    return # quantile already computed. 
             
         for j, xj in enumerate(x):
             try:
@@ -189,16 +256,19 @@ class RFLM5():
                 n[j] = np.nan #np.inf 
             finally:
                 if RFLM5.__verbosity == 1:
-                    print(f"ΔS: {np.exp(xj):.1f}:  N: {n[j]:.0f}, F_W: {F_W(wj, xj, β0, β1, σ, μ_γ, σ_γ)}")                                    
+                    print(f"ΔS: {np.exp(xj):.1f}:  N: {n[j]:.0f}, F_W: {F_W(wj, xj, β0, β1, σ, μ_γ, σ_γ)}")  
                     
         # Store results
-        self.quantile[q] = [np.exp(x), n] # SN-data
+        if params is None:
+            self.quantile[q] = [np.exp(x), n] # SN-data
+        else:
+            return [np.exp(x), n]
        
     
     
     def plot_SN_curve(self, ΔSmax:float=300, q:list=[0.025,0.5,0.975], 
                       nlim:list=None, slim:list=None,
-                      npts=40, filename:str=None, show_lsq:bool=False):
+                      npts=40, filename:str=None, show_lsq:bool=False, label=None, fast=True):
         """Plots the fitted RFLM model and the data
 
         Args:
@@ -216,6 +286,7 @@ class RFLM5():
                         
         θ = [β0, β1, σ, μ_γ, σ_γ] = self.β0, self.β1, self.σ, self.μ_γ, self.σ_γ
         a, m = self.a_lsq, self.m_lsq
+        if label is None: label = "RFLM"
         
         if None in θ: #not np.all(θ):
             print("Need to fit the data using the fit function")
@@ -223,22 +294,28 @@ class RFLM5():
                                               
         # Now plot the curves
         fig, ax = plt.subplots()
-                
+                                
         if q is not None:
             for i, qi in enumerate(q):
-                try: 
+                if qi in self.quantile.keys():
                     [s, n] = self.quantile[qi]                
-                except: 
-                    print(f"q={qi} not computed. Computing using compute_quantile.")
-                    self.compute_quantile(qi, ΔSmax, npts=npts)
+                else: 
+                    if self.__verbosity == 1: print(f"q={qi} not computed.", end=" ")
+                    if fast:
+                        if self.__verbosity == 1: print("Computing using fast method.")
+                        n = 10**np.linspace(1,12, npts)
+                        self.quantile[qi] = [self.get_stress(qi, n), n] 
+                    else:
+                        if self.__verbosity == 1: print("Computing using compute_quantile.")                                    
+                        self.compute_quantile(qi, ΔSmax=ΔSmax, npts=npts)
                     
                 [s, n] = self.quantile[qi]                
-                ax.plot(n, s, label=f"RFLM (q={qi})", lw=2)
+                ax.plot(n, s, label=f"{label} (q={qi})", lw=2)
 
         else:
             for qi in sorted(self.quantile):
                 [s, n] = self.quantile[qi]
-                ax.plot(n, s, label=f"RFLM (q={qi})", lw=2)
+                ax.plot(n, s, label=f"{label} (q={qi})", lw=2)
                 
         if show_lsq and np.all([a,m]): # add the 2 parameter model curve
             ax.plot(a*self.ΔS**-m, self.ΔS, label="LSQ (γ=0)", ls='--', color='k')
@@ -259,6 +336,26 @@ class RFLM5():
             plt.close(fig)
         else:        
             return fig, ax
+    
+    def add_SN_curve(self, ax, params=None, q:list=[0.025,0.5,0.975], ΔSmax:float=300, npts=40, label=None, fast=True, **kwargs):
+        if params is None:
+            params = [β0, β1, σ, μ_γ, σ_γ] = self.β0, self.β1, self.σ, self.μ_γ, self.σ_γ
+            
+        if len(params) == 5: # add a 5 parameter curve
+            θ = [β0, β1, σ, μ_γ, σ_γ] = params
+            if label is None: label = f"β0={β0:.3f}; β1={β1:.3f}; σ={σ:.3f};\nμ_γ={μ_γ:.3f}; σ_γ={σ_γ:.3f}" 
+        else:
+            raise IndexError("params should have 5 parameters")
+        
+        for i, qi in enumerate(q):
+            if fast:
+                n = 10**np.linspace(1,12, npts)
+                s = self.get_stress(qi, n, params=params)
+                self.quantile[qi] = [s, n] 
+            else:
+                [s, n] = self.compute_quantile(qi, ΔSmax=ΔSmax, npts=npts, params=params)
+            ax.plot(n, s, label=f"{label} (q={qi})", lw=2, **kwargs)
+        ax.legend(loc=0) # update legend
     
     def save(self, filename:str):
         """Saves the model parameters to file
