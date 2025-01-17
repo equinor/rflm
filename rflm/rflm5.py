@@ -209,7 +209,7 @@ class RFLM5():
         else:
             θ = [β0, β1, σ, μ_γ, σ_γ] = params
         γ = np.exp(norm.ppf(q, loc=μ_γ, scale=σ_γ))
-        ΔS = np.exp(1/β1*(np.log(N)-β0)) + γ  +  #norm.ppf(q, loc=0, scale=σ)
+        ΔS = np.exp(1/β1*(np.log(N)-β0)) + γ  #+  norm.ppf(q, loc=0, scale=σ)
         return ΔS
     
     
