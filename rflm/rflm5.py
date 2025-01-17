@@ -209,11 +209,11 @@ class RFLM5():
         else:
             θ = [β0, β1, σ, μ_γ, σ_γ] = params
         γ = np.exp(norm.ppf(q, loc=μ_γ, scale=σ_γ))
-        ΔS = np.exp(1/β1*(np.log(N)-β0)) + γ   
+        ΔS = np.exp(1/β1*(np.log(N)-β0)) + γ  +  norm.ppf(q, loc=0, scale=σ)
         return ΔS
     
     
-    def compute_quantile(self, q:float, ΔSmax:float=300, force:bool=False, npts=40, params=None):
+    def compute_quantile(self, q:float, ΔSmax:float=300, force:bool=False, npts=40, params=None, ΔS=None):
         """Computes the q-fractile curve of the RFLM fit
 
         Args:
@@ -233,8 +233,10 @@ class RFLM5():
             return 
         
         # Establish the curves at the relavent probability level
+        # Option added for the user to specify his own stress ranges
         x_min = norm.ppf(q*1.001, loc=μ_γ, scale=σ_γ) 
-        x = np.linspace(x_min, np.log(ΔSmax), npts)
+        x = np.log(ΔS) if ΔS is not None else np.linspace(x_min, np.log(ΔSmax), npts)
+        x = x[x>=x_min]  # ensure stress ranges are valid 
         n = np.zeros(x.size)
 
         if params is None:
@@ -259,6 +261,7 @@ class RFLM5():
                     print(f"ΔS: {np.exp(xj):.1f}:  N: {n[j]:.0f}, F_W: {F_W(wj, xj, β0, β1, σ, μ_γ, σ_γ)}")  
                     
         # Store results
+        if ΔS is not None: return [np.exp(x), n]
         if params is None:
             self.quantile[q] = [np.exp(x), n] # SN-data
         else:
@@ -268,7 +271,7 @@ class RFLM5():
     
     def plot_SN_curve(self, ΔSmax:float=300, q:list=[0.025,0.5,0.975], 
                       nlim:list=None, slim:list=None,
-                      npts=40, filename:str=None, show_lsq:bool=False, label=None, fast=True):
+                      npts=40, filename:str=None, show_lsq:bool=False, label=None, fast=False):
         """Plots the fitted RFLM model and the data
 
         Args:
@@ -318,10 +321,11 @@ class RFLM5():
                 ax.plot(n, s, label=f"{label} (q={qi})", lw=2)
                 
         if show_lsq and np.all([a,m]): # add the 2 parameter model curve
-            ax.plot(a*self.ΔS**-m, self.ΔS, label="LSQ (γ=0)", ls='--', color='k')
+            if self.ΔS is not None: ax.plot(a*self.ΔS**-m, self.ΔS, label="LSQ (γ=0)", ls='--', color='k')
         # Add the data points
-        ax.scatter(self.N[self.δ==1], self.ΔS[self.δ==1], label="failures", marker="^")
-        ax.scatter(self.N[self.δ==0], self.ΔS[self.δ==0], label="runouts", marker='o', facecolor="none", edgecolor="orange")
+        if self.ΔS is not None:
+            ax.scatter(self.N[self.δ==1], self.ΔS[self.δ==1], label="failures", marker="^")
+            ax.scatter(self.N[self.δ==0], self.ΔS[self.δ==0], label="runouts", marker='o', facecolor="none", edgecolor="orange")
         # format plot
         ax.set_xscale("log")
         ax.set_yscale("log")
@@ -337,7 +341,7 @@ class RFLM5():
         else:        
             return fig, ax
     
-    def add_SN_curve(self, ax, params=None, q:list=[0.025,0.5,0.975], ΔSmax:float=300, npts=40, label=None, fast=True, **kwargs):
+    def add_SN_curve(self, ax, params=None, q:list=[0.025,0.5,0.975], ΔSmax:float=300, npts=40, label=None, fast=False, **kwargs):
         if params is None:
             params = [β0, β1, σ, μ_γ, σ_γ] = self.β0, self.β1, self.σ, self.μ_γ, self.σ_γ
             
