@@ -137,7 +137,7 @@ class RFLM5():
         else:
             raise IndexError("Expected a list of 5 or 7 entries")
         
-    def read_test_data(self, filepath: str):
+    def read_test_data(self, filepath: str, cols:list=[0, 1, 2]):
         """
         Reads fatigue data from a matlab or text file. 
     
@@ -149,6 +149,11 @@ class RFLM5():
         Column 1:       Stress range
         Column 2:       Runout parameter (1 for runout, 0 for no runout)
         Column 3:       Number of cycles to failure
+        
+        If a different column order is required use the cols keyword argument to 
+        specify a list of column numbers e.g. cols=[5,4,1] corresponding to the
+        column numbers of the stress range, runout and number of cycles in that
+        order. Note that the cols=[5,4,1] corresponds to columns 6, 5, 2 respectively 
         
         The filename of the text file shall NOT end in .mat
         
@@ -181,7 +186,7 @@ class RFLM5():
                                 "Make sure it has array names 'X', 'y', 'runout_bool'")
         else:
             try:
-                ΔS, runout_bool, N = np.loadtxt(filepath).T
+                ΔS, runout_bool, N = np.loadtxt(filepath, usecols=cols).T
                 δ = 1 - runout_bool
             except:
                 raise NotImplementedError(f"data file format for {filepath} not recognized. "
