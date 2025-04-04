@@ -8,7 +8,7 @@ The repository provides classes for handling the RFLM. Currently only one class 
 
 # Installation
 
-Requires python 3.X or greater to be installed. 
+Requires python 3.X or greater to be installed.
 
 
 Create and activate a python virtual environment (exemplified for powershell)
