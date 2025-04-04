@@ -8,6 +8,8 @@ setup(
         'numpy',
         'scipy',
         'matplotlib',
+        'pandas',
+        'openpyxl',
     ],
     url='https://github.com/yourusername/my_package',
     description='A brief description of your package',

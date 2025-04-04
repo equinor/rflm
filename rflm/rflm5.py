@@ -1,6 +1,7 @@
 import sys
 import scipy.optimize as opt
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 from scipy.integrate import quad
 from scipy.stats import norm
@@ -374,24 +375,34 @@ class RFLM5():
         """
         import os
         from datetime import datetime
-        with open(filename, 'w', encoding='utf-8') as fh:
-            fh.write(f'# This file contains results from an SLSQP fit of the RLFM 5\n')
-            fh.write(f'# parameter model to the test data. Fit performed\n')
-            fh.write(f'# using a python code at https://github.com/equinor/rflm.\n#\n')
-            fh.write(f'# Code run by {os.getlogin()} on {datetime.now().strftime("%Y-%m-%d %H:%M")}\n#\n')
-            fh.write(f'# Parameters listed below are in accordance with the formulation in\n')        
-            fh.write(f'# Pascal and Meeker 1999 - Estimating Fatigue Curves with the\n')
-            fh.write(f'# Random Fatigue-Limit Model, Sixth Annual Spring Research Conference,\n')
-            fh.write(f'# Minneapolis, Minnesota, June 2–4, 1999\n#\n')
-            fh.write(f'# β0, β1, σ, μ_γ, σ_γ - parameters from the RFLM fit\n')
-            fh.write(f"# a, m - parameters from a LS fit of a standard SN-curve\n")
-            if self.m_fixed: fh.write(f'# β1 (m) specified as fixed by user\n#\n')
-            fh.write(f'# β0, β1, σ, μ_γ, σ_γ, a, m\n')
-            fh.write(f'{self.β0} {self.β1} {self.σ} {self.μ_γ} {self.σ_γ} {self.a_lsq} {self.m_lsq}\n')
+        if filename.endswith('xlsx'):
+            params = [self.β0, self.β1, self.σ, self.μ_γ, self.σ_γ, self.a_lsq, self.m_lsq]
+            var_names = 'beta0 beta1 sigma mean_gamma sigma_gamma a_lsq m_lsq'.split()
+            df = pd.DataFrame({'Parameter': var_names, 'Value': params})
+            df.to_excel(filename, index=False)
+        else:        
+            with open(filename, 'w', encoding='utf-8') as fh:
+                fh.write(f'# This file contains results from an SLSQP fit of the RLFM 5\n')
+                fh.write(f'# parameter model to the test data. Fit performed\n')
+                fh.write(f'# using a python code at https://github.com/equinor/rflm.\n#\n')
+                fh.write(f'# Code run by {os.getlogin()} on {datetime.now().strftime("%Y-%m-%d %H:%M")}\n#\n')
+                fh.write(f'# Parameters listed below are in accordance with the formulation in\n')        
+                fh.write(f'# Pascal and Meeker 1999 - Estimating Fatigue Curves with the\n')
+                fh.write(f'# Random Fatigue-Limit Model, Sixth Annual Spring Research Conference,\n')
+                fh.write(f'# Minneapolis, Minnesota, June 2–4, 1999\n#\n')
+                fh.write(f'# β0, β1, σ, μ_γ, σ_γ - parameters from the RFLM fit\n')
+                fh.write(f"# a, m - parameters from a LS fit of a standard SN-curve\n")
+                if self.m_fixed: fh.write(f'# β1 (m) specified as fixed by user\n#\n')
+                fh.write(f'# β0, β1, σ, μ_γ, σ_γ, a, m\n')
+                fh.write(f'{self.β0} {self.β1} {self.σ} {self.μ_γ} {self.σ_γ} {self.a_lsq} {self.m_lsq}\n')
 
 
     def load(self, filename:str):
-        self.β0, self.β1, self.σ, self.μ_γ, self.σ_γ, self.a_lsq, self.m_lsq = np.loadtxt(filename)
+        if filename.endswith('xlsx'):
+            df = pd.read_excel(filename)
+            self.β0, self.β1, self.σ, self.μ_γ, self.σ_γ, self.a_lsq, self.m_lsq = df["Value"].values
+        else:
+            self.β0, self.β1, self.σ, self.μ_γ, self.σ_γ, self.a_lsq, self.m_lsq = np.loadtxt(filename)
 
 
     def set_params(self, β0, β1, σ, μ_γ, σ_γ, a_lsq=None, m_lsq=None):
