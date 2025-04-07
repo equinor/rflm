@@ -65,7 +65,7 @@ def read_cli_arguments():
     return args
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
     # Get command line arguments
     args = read_cli_arguments()
 
@@ -87,4 +87,16 @@ if __name__=='__main__':
     # Plot the SN-curve
     rflm.plot_SN_curve(filename=args.o + '.png', nlim=args.nlim)
 
- 
+    # Prepare output parameters for Excel
+    output_parameters = {
+        'Parameter Symbol': ['β0', 'β1', 'σ', 'μ_γ', 'σ_γ', 'a', 'm'],  # Parameter symbols
+        'Value': [rflm.β0, rflm.β1, rflm.σ, rflm.μ_γ, rflm.σ_γ, rflm.a_lsq, rflm.m_lsq]  # Actual attributes from the RFLM5 instance
+    }
+    
+    # Create a DataFrame
+    output_df = pd.DataFrame(output_parameters)
+
+    # Save to Excel file
+    output_excel_file = args.o + '_parameters.xlsx'
+    output_df.to_excel(output_excel_file, index=False)
+    print(f"Output parameters have been saved to {output_excel_file}.")
