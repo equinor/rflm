@@ -4,32 +4,19 @@ def read_cli_arguments():
     description = """
     Random fatigue limit code 
     
-    Reads fatigue data from a matlab or text file. 
+    Reads fatigue data from an Excel file. 
     
-    Text data file:
-    ===============
-    The text file shall have column data, where the columns are separated 
-    by spaces and represent:
+    Excel data file:
+    =================
+    The Excel file shall have column data, where the columns are represented as:
     
     Column 1:       Stress range
-    Column 2:       Runout parameter (1 for runout, 0 for no runout)
-    Column 3:       Number of cycles to failure
-    
-    The filename of the text file shall NOT end in .mat
-    
-    MATLAB data file:
-    =================
-    The matlab file shall have the following array names. 
-    
-    "X":            Stress range
-    "runout_bool":  Runout parameter (1 for runout, 0 for no runout)
-    "y":            Number of cycles to failure, N
-    
-    The filename of the matlab file shall end in .mat"""
+    Column 2:       Number of cycles to failure
+    Column 3:       Runout parameter (1 for runout, 0 for no runout)
+    """
     parser = argparse.ArgumentParser(
         description=description, formatter_class=argparse.RawTextHelpFormatter)
-    #parser.add_argument('data_filename', metavar="filename", type=str, help='The input data file')
-    parser.add_argument('-i', metavar="filename", type=str, default="data.txt", help='Input data file name (default: %(default)s)')
+    parser.add_argument('-i', metavar="filename", type=str, default="data.xlsx", help='Input data file name (default: %(default)s)')
     parser.add_argument('-o', metavar="identifier", type=str, default="output", help='Optional identifier for the outputted data (default: %(default)s)')
     parser.add_argument('-v', metavar="level", type=int, default=0, help="verbosity level for printing (0=no print, 1=print), (default: %(default)s)")
     parser.add_argument('-m', metavar="value", type=float, default=None, help="Fixed value for slope of SN-curve")
@@ -41,7 +28,7 @@ def read_cli_arguments():
     return args
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
     
     from rflm import RFLM5
     
@@ -56,18 +43,13 @@ if __name__=='__main__':
 
     # Instantiate an RFLM5 class instance using the inputted data
     rflm = RFLM5(filename=args.i, m=args.m)
-    #(ΔS, δ, N) = RFLM5.read_test_data(filename="sharepoint/data_Mikulski2022.mat", m=args.m)
-    #(ΔS, δ, N) = RFLM5.read_test_data(filename="sharepoint/data_Stojkovic2018.mat", m=args.m)
-    #(ΔS, δ, N) = RFLM5.read_test_data(filename="sharepoint/data_dnv_correspondence231026.mat", m=args.m)
 
     # Fit the model
     rflm.fit()
     
-    # plot the SN-curve
+    # Plot the SN-curve
     rflm.plot_SN_curve(filename=args.o + '.png', nlim=args.nlim)
 
-    # Now export the results
-    rflm.save(args.o + '.txt')
-
-
-
+    # Now export the results to an Excel file
+    rflm.save(args.o + '.xlsx')  # Save as Excel file
+    print(f"Data has been successfully converted to {args.o}.xlsx.")
