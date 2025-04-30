@@ -1,3 +1,4 @@
+
 def read_cli_arguments():
     """ Returns the command line arguments """
     import argparse

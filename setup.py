@@ -10,6 +10,7 @@ setup(
         'matplotlib',
         'pandas',
         'openpyxl',
+	'tqdm',
     ],
     url='https://github.com/yourusername/my_package',
     description='A brief description of your package',
