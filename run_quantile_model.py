@@ -9,6 +9,7 @@ def main():
     parser.add_argument('-p', '--params', required=True, help='Path to fitted parameters Excel file')
     parser.add_argument('--quantiles', type=float, nargs='+', required=True, help='List of quantiles to compute, e.g., --quantiles 0.01 0.5 0.99')
     parser.add_argument('--nlim', type=float, nargs=2, help='Limits for x-axis (Cycles to Failure), e.g., --nlim 1e4 1e8')
+    parser.add_argument('--slim', type=float, nargs=2, help='Stress range limits (min max), e.g., --slim 50 300')
     args = parser.parse_args()
 
     # === Load input data ===
@@ -32,7 +33,17 @@ def main():
 
     # === Run model ===
     model = RFLMQuantileModel(θ)
-    df_quantiles = model.compute_quantile_curves(quantiles=args.quantiles)
+    if args.slim:
+        ΔS_min, ΔS_max = args.slim
+    else:
+        ΔS_min = ΔS_max = None  # auto-detect from df_exp
+
+    df_quantiles = model.compute_quantile_curves(
+        ΔS_min=ΔS_min,
+        ΔS_max=ΔS_max,
+        quantiles=args.quantiles,
+        df_exp=df_exp
+    )
 
     # === Output filenames ===
     base_name = os.path.splitext(os.path.basename(args.input))[0]

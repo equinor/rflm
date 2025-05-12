@@ -26,14 +26,28 @@ class RFLMQuantileModel:
     def quantile_function(self, q, x):
         return lambda w: self.F_W(w, x) - q
 
-    def compute_quantile_curves(self, ΔS_min=40, ΔS_max=300, npts=40, quantiles=None):
+    def compute_quantile_curves(self, ΔS_min=None, ΔS_max=None, npts=40, quantiles=None, df_exp=None):
         if quantiles is None:
             raise ValueError("Quantiles must be provided.")
+
+        # Automatically determine stress range from experimental data if not given
+        if (ΔS_min is None or ΔS_max is None) and df_exp is not None:
+            stress_values = df_exp["Stress"]
+            if ΔS_min is None:
+                ΔS_min = stress_values.min()
+            if ΔS_max is None:
+                ΔS_max = stress_values.max()
+
+        # Fallback defaults if nothing is provided
+        if ΔS_min is None:
+            ΔS_min = 40
+        if ΔS_max is None:
+            ΔS_max = 300
 
         x_vals = np.linspace(np.log(ΔS_min), np.log(ΔS_max), npts)
         results = []
 
-        print("Computing quantile SN curves...")
+        print(f"Computing quantile SN curves for ΔS ∈ [{ΔS_min:.1f}, {ΔS_max:.1f}]...")
         for q in tqdm(quantiles, desc="Quantiles"):
             for x in tqdm(x_vals, desc=f"q={q:.3f}", leave=False):
                 try:
