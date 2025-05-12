@@ -60,9 +60,9 @@ usage: rflm_script.py [-h] [-i filename] [-o identifier] [-v level] [-m value]
 
     The filename of the text file shall NOT end in .mat
 
-    Quantile SN Curve Computation:
+    RFLM model and Quantile SN Curve Computation:
     =================
-    The `RFLMQuantileModel` supports user-defined quantiles and stress range limits.
+    The `RFLM` supports user-defined quantiles and stress range limits.
 ```
 
 You can run the first run rflm model following command:
@@ -74,13 +74,3 @@ This will generate an excel file containing the fitted parameters, which you can
 ```powershell
 python ./run_quantile_model.py -i my_data.xlsx -p my_fitted_parameters.xlsx --quantiles 0.025 0.5 0.99 --slim 40 450 --nlim 1e4 1e7
 ```
-
--i specifies the input Excel file with experimental data
-
--p provides the fitted parameter file
-
---quantiles defines the quantiles to compute (e.g., 0.025, 0.5, 0.975)
-
---slim sets the minimum and maximum stress range to evaluate
-
---nlim defines x-axis (cycles) range for plotting
