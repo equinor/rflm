@@ -65,7 +65,7 @@ usage: rflm_script.py [-h] [-i filename] [-o identifier] [-v level] [-m value]
     The `RFLM` supports user-defined quantiles and stress range limits.
 ```
 
-You can run the first run rflm model following command:
+You can first run rflm model by using following command:
 
 ```powershell
 python .\rflm_script.py -i my_data.xlsx -o output_name -v 1
