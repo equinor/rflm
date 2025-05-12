@@ -72,7 +72,7 @@ python .\rflm_script.py -i my_data.xlsx -o output_name -v 1
 ```
 This will generate an excel file containing the fitted parameters, which you can use later to generate desired quantiles by using the following command:
 ```powershell
-python ./run_quantile_model.py -i ./data/data_syn2.xlsx -p ./parameters/syn2.xlsx --quantiles 0.025 0.5 0.99 --slim 40 450 --nlim 1e4 1e7
+python ./run_quantile_model.py -i my_data.xlsx -p my_fitted_parameters.xlsx --quantiles 0.025 0.5 0.99 --slim 40 450 --nlim 1e4 1e7
 ```
 
 -i specifies the input Excel file with experimental data
