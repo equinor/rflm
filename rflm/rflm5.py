@@ -1,3 +1,4 @@
+
 import sys
 import scipy.optimize as opt
 import numpy as np
@@ -36,13 +37,14 @@ def quantile_function(q, x, θ):
 
 class RFLM5():
     
-    __verbosity:int = 1
+    __verbosity: int = 1
     
     @classmethod
-    def set_verbosity(cls, value): cls.__verbosity = value
+    def set_verbosity(cls, value): 
+        cls.__verbosity = value
 
-    def __init__(self, ΔS:np.ndarray=None, runout_bool:np.ndarray=None, N:np.ndarray=None, m:float=None, filename:str=None):
-        """class to handle the 5-parameter random fatigue limit model of:
+    def __init__(self, ΔS: np.ndarray = None, runout_bool: np.ndarray = None, N: np.ndarray = None, m: float = None, filename: str = None):
+        """Class to handle the 5-parameter random fatigue limit model of:
 
             Pascal and Meeker 1999 - Estimating Fatigue Curves with the
             Random Fatigue-Limit Model, Sixth Annual Spring Research Conference
@@ -52,10 +54,10 @@ class RFLM5():
             
                 log(N) = β0 + β1.log(ΔS-γ)
                 
-            where the N and ΔS and the number of cycles to failure and the stress range, and γ is the fatigue limit.
+            where N and ΔS are the number of cycles to failure and the stress range, and γ is the fatigue limit.
             The parameters of the model are  
             
-                β0: y-intercept of in the log-space
+                β0: y-intercept in the log-space
                 β1: slope of SN-curve in the log-space
                 σ: standard deviation of the log(N) data 
                 μ_γ: expected fatigue limit in the log-space
@@ -66,28 +68,28 @@ class RFLM5():
             runout_bool (np.ndarray, optional): Runout parameter (1 for runout, 0 for no runout). Defaults to None.
             N (np.ndarray, optional): Number of cycles to failure. Defaults to None.
             m (float, optional): Fixed slope of SN-curve. Defaults to None.
-            filename (str, optional): Data file. If specified read_data_file is called. Defaults to None.
+            filename (str, optional): Data file. If specified, read_data_file is called. Defaults to None.
         """
 
-        # variables for the data
+        # Variables for the data
         self.ΔS = None
         self.δ = None
         self.N = None
         self.m = m
         self.m_fixed = True if m is not None else False
 
-        # parameters of the model
+        # Parameters of the model
         self.β0 = None
         self.β1 = None
         self.σ = None
         self.μ_γ = None
         self.σ_γ = None
         
-        # parameters of 2 parameter standard model
+        # Parameters of 2 parameter standard model
         self.a_lsq = None  
         self.m_lsq = m 
         
-        # storage for computed quantiles
+        # Storage for computed quantiles
         self.quantile = {}
         
         if filename is not None:
@@ -99,103 +101,90 @@ class RFLM5():
             self.δ = 1 - runout_bool
             self.N = N    
             self.data_set = True
-            
-          
-    @property
-    def params(self):
-        """ 
-        Returns a list of the parameters for the model log(N) = β0 + β1.log(ΔS-γ)
-        The parameters returned are:
-            β0: y-intercept of in the log-space
-            β1: slope of SN-curve in the log-space
-            σ: standard deviation of the log(N) data 
-            μ_γ: expected fatigue limit in the log-space
-            σ_γ: standard deviation of the fatigue limit in the log-space
-            a: from least squared fitted N=a(ΔS)^(-m)
-            m: from least squared fitted N=a(ΔS)^(-m)
+
+    def read_test_data(self, filepath: str):
         """
-        return [self.β0, self.β1, self.σ, self.μ_γ, self.σ_γ, self.a_lsq, self.m_lsq]
-        
-    
-    @params.setter
-    def params(self, values):
-        """ 
-        Sets the parameters for the model log(N) = β0 + β1.log(ΔS-γ)
-        The parameters should be provided in list of values with entries:
-            β0: y-intercept of in the log-space
-            β1: slope of SN-curve in the log-space
-            σ: standard deviation of the log(N) data 
-            μ_γ: expected fatigue limit in the log-space
-            σ_γ: standard deviation of the fatigue limit in the log-space
-            a: from least squared fitted N=a(ΔS)^(-m)
-            m: from least squared fitted N=a(ΔS)^(-m)
-        The last two entries are optional. 
-        """
-        if len(values) == 7:
-            self.β0, self.β1, self.σ, self.μ_γ, self.σ_γ, self.a_lsq, self.m_lsq = values
-        elif len(values) == 5:
-            self.β0, self.β1, self.σ, self.μ_γ, self.σ_γ = values
-        else:
-            raise IndexError("Expected a list of 5 or 7 entries")
-        
-    def read_test_data(self, filepath: str, cols:list=[0, 1, 2]):
-        """
-        Reads fatigue data from a matlab or text file. 
-    
-        Text data file:
-        ===============
-        The text file shall have column data, where the columns are separated 
-        by spaces and represent:
-        
-        Column 1:       Stress range
-        Column 2:       Runout parameter (1 for runout, 0 for no runout)
-        Column 3:       Number of cycles to failure
-        
-        If a different column order is required use the cols keyword argument to 
-        specify a list of column numbers e.g. cols=[5,4,1] corresponding to the
-        column numbers of the stress range, runout and number of cycles in that
-        order. Note that the cols=[5,4,1] corresponds to columns 6, 5, 2 respectively 
-        
-        The filename of the text file shall NOT end in .mat
-        
-        MATLAB data file:
+        Reads fatigue data from an Excel file.
+
+        Excel data file:
         =================
-        The matlab file shall have the following array names. 
+        The Excel file shall have column data, where the columns represent:
         
-        "X":            Stress range
-        "runout_bool":  Runout parameter (1 for runout, 0 for no runout)
-        "y":            Number of cycles to failure, N
-        
-        The filename of the matlab file shall end in .mat
+        Column 1:       Stress range (ΔS)
+        Column 2:       Number of cycles to failure (N)
+        Column 3:       Runout parameter (1 for runout, 0 for no runout)
 
         Args:
             filepath (str): filepath
-
-        Raises:
-            NotImplementedError: Raised if the data file cannot be read
-
         """
-        from scipy.io import loadmat
-        if filepath.endswith('.mat'):
-            data = loadmat(filepath)
-            try:
-                ΔS = np.r_[[float(v) for v in np.squeeze(data["X"])]] # stress range
-                δ = 1 - np.r_[[int(v) for v in np.squeeze(data["runout_bool"])]]
-                N = np.r_[[float(v) for v in np.squeeze(data["y"])]] # number of cycles to failure        
-            except:
-                raise ValueError(f"Issue reading matlab file {filepath}. "
-                                "Make sure it has array names 'X', 'y', 'runout_bool'")
-        else:
-            try:
-                ΔS, runout_bool, N = np.loadtxt(filepath, usecols=cols).T
-                δ = 1 - runout_bool
-            except:
-                raise NotImplementedError(f"data file format for {filepath} not recognized. "
-                                        "Expecting a text file with three columns of data")
-        self.ΔS = ΔS
-        self.δ = δ
-        self.N = N
-        return
+        # Read the Excel file
+        df = pd.read_excel(filepath)
+
+        # Check that the DataFrame has the expected number of columns
+        if df.shape[1] < 3:
+            raise ValueError("The Excel file must contain at least three columns.")
+
+        # Extract the data
+        self.ΔS = df.iloc[:, 0].values  # Column 1: Stress range
+        self.N = df.iloc[:, 1].values    # Column 2: Number of cycles to failure
+        runout_bool = df.iloc[:, 2].values  # Column 3: Runout parameter
+
+        # Calculate δ (1 for no runout, 0 for runout)
+        self.δ = 1 - runout_bool
+
+        print("Data has been successfully read from the Excel file.")
+
+    def fit(self):
+        """Performs a SLSQP fit to the 5 parameter RFLM model."""
+        if self.ΔS is None: 
+            print("Need to set the data. Set data during construction or using read_test_data function")
+            return 
+        θ = RFLM5.__regression(self.ΔS, self.δ, self.N, self.m)
+        self.β0, self.β1, self.σ, self.μ_γ, self.σ_γ, self.a_lsq, self.m_lsq = θ
+
+    def save(self, filename: str):
+        """Saves the model parameters to an Excel file
+
+        Args:
+            filename (str): name of output file
+        """
+        import os
+        from datetime import datetime
+        import pandas as pd
+
+        # Prepare the data to be saved
+        parameters = {
+            'Parameter Symbol': ['β0', 'β1', 'σ', 'μ_γ', 'σ_γ', 'a', 'm'],
+            'Value': [self.β0, self.β1, self.σ, self.μ_γ, self.σ_γ, self.a_lsq, self.m_lsq]
+        }
+
+        # Create a DataFrame
+        df = pd.DataFrame(parameters)
+
+        # Create comments to be added to the Excel file
+        comments = [
+            '# This file contains results from an SLSQP fit of the RLFM 5',
+            '# parameter model to the test data. Fit performed',
+            '# using a python code at https://github.com/equinor/rflm.',
+            f'# Code run by {os.getlogin()} on {datetime.now().strftime("%Y-%m-%d %H:%M")}',
+            '# Parameters listed below are in accordance with the formulation in',
+            '# Pascal and Meeker 1999 - Estimating Fatigue Curves with the',
+            '# Random Fatigue-Limit Model, Sixth Annual Spring Research Conference,',
+            '# Minneapolis, Minnesota, June 2–4, 1999',
+            '# β0, β1, σ, μ_γ, σ_γ - parameters from the RFLM fit',
+            '# a, m - parameters from a LS fit of a standard SN-curve'
+        ]
+
+        # Write comments and parameters to the Excel file
+        with pd.ExcelWriter(filename, engine='openpyxl') as writer:
+            # Write comments to the first few rows
+            for i, comment in enumerate(comments):
+                writer.sheets['Sheet1'].cell(row=i + 1, column=1, value=comment)
+            
+            # Write the parameters DataFrame starting from row after comments
+            df.to_excel(writer, index=False, startrow=len(comments) + 1, sheet_name='Sheet1')
+
+        print(f"Parameters have been successfully saved to {filename}.")
     
         
     def fit(self):
@@ -273,7 +262,7 @@ class RFLM5():
         else:
             return [np.exp(x), n]
        
-    
+
     
     def plot_SN_curve(self, ΔSmax:float=300, q:list=[0.025,0.5,0.975], 
                       nlim:list=None, slim:list=None,
@@ -524,4 +513,3 @@ class RFLM5():
         θ = [β0, β1, σ, μ_γ, σ_γ, a, m]  
 
         return θ
-

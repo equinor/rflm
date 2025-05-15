@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='rflm',
-    version='0.1',
+    version='0.2',
     packages=find_packages(),
     install_requires=[
         'numpy',
@@ -10,6 +10,7 @@ setup(
         'matplotlib',
         'pandas',
         'openpyxl',
+	'tqdm',
     ],
     url='https://github.com/yourusername/my_package',
     description='A brief description of your package',

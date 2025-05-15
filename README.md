@@ -49,37 +49,28 @@ usage: rflm_script.py [-h] [-i filename] [-o identifier] [-v level] [-m value]
 
     Reads fatigue data from a matlab or text file.
 
-    Text data file:
+    Excel data file:
     ===============
-    The text file shall have column data, where the columns are separated
+    The excel file shall have column data, where the columns are separated
     by spaces and represent:
 
     Column 1:       Stress range
-    Column 2:       Runout parameter (1 for runout, 0 for no runout)
-    Column 3:       Number of cycles to failure or runout
+    Column 2:       Number of cycles to failure or runout
+    Column 3:       Runout parameter (1 for runout, 0 for no runout)
 
     The filename of the text file shall NOT end in .mat
 
-    MATLAB data file:
+    RFLM model and Quantile SN Curve Computation:
     =================
-    The matlab file shall have the following array names.
-
-    "X":            Stress range
-    "runout_bool":  Runout parameter (1 for runout, 0 for no runout)
-    "y":            Number of cycles to failure, N
-
-    The filename of the matlab file shall end in .mat
-
-options:
-  -h, --help     show this help message and exit
-  -i filename    Input data file name (default: data.txt)
-  -o identifier  Optional identifier for the outputted data (default: output)
-  -v level       verbosity level for printing (0=no print, 1=print), (default: 0)
-  -m value       Fixed value for slope of SN-curve
+    The `RFLM` supports user-defined quantiles and stress range limits.
 ```
 
-For example
+You can first run rflm model by using following command:
 
 ```powershell
-python .\rflm_script.py -i my_data.mat -o output_name -v 1
+python .\rflm_script.py -i my_data.xlsx -o output_name -v 1
+```
+This will generate an excel file containing the fitted parameters, which you can use later to generate desired quantiles by using the following command:
+```powershell
+python ./run_quantile_model.py -i my_data.xlsx -p my_fitted_parameters.xlsx --quantiles 0.025 0.5 0.99 --slim 40 450 --nlim 1e4 1e7
 ```
