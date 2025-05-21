@@ -1,3 +1,5 @@
+# Updated and clean version of RFLMQuantileModel and RFLMGeneralModel with safe plotting
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -5,6 +7,32 @@ from scipy.integrate import quad
 from scipy.stats import norm
 from scipy.optimize import brentq
 from tqdm import tqdm
+
+class RFLMGeneralModel:
+    def __init__(self, θ):
+        self.β0, self.β1, self.σ, self.μ_γ, self.σ_γ = θ
+        self.gamma = np.exp(self.μ_γ)  # expected fatigue limit in stress units
+        self.EPS = 1e-300
+
+    def compute_sn_curve(self, ΔS_min=None, ΔS_max=None, npts=300):
+        # Apply defaults if user does not provide limits
+        if ΔS_min is None:
+            ΔS_min = max(self.gamma + 1e-3, 50)
+        if ΔS_max is None:
+            ΔS_max = 300
+
+        ΔS = np.linspace(ΔS_min, ΔS_max, npts)
+        logN = self.β0 + self.β1 * np.log(ΔS - self.gamma)
+        N = np.exp(logN)
+        return N, ΔS
+
+    def to_dataframe(self, ΔS_min=None, ΔS_max=None, npts=300):
+        N, ΔS = self.compute_sn_curve(ΔS_min=ΔS_min, ΔS_max=ΔS_max, npts=npts)
+        return pd.DataFrame({
+            "Quantile": ["RFLM"] * len(N),
+            "Stress Range": ΔS,
+            "Cycles to Failure": N
+        })
 
 class RFLMQuantileModel:
     def __init__(self, θ):
@@ -38,7 +66,6 @@ class RFLMQuantileModel:
             if ΔS_max is None:
                 ΔS_max = stress_values.max()
 
-        # Fallback defaults if nothing is provided
         if ΔS_min is None:
             ΔS_min = 40
         if ΔS_max is None:
@@ -67,9 +94,19 @@ class RFLMQuantileModel:
     def plot(self, df_quantiles, df_exp=None, filename=None, nlim=None):
         fig, ax = plt.subplots(figsize=(10, 6))
 
-        for q in sorted(df_quantiles["Quantile"].unique()):
+        quantile_labels = df_quantiles["Quantile"].unique()
+        sorted_labels = sorted(
+            quantile_labels,
+            key=lambda x: float(x) if isinstance(x, (float, int)) or str(x).replace('.', '', 1).isdigit() else float('inf')
+        )
+
+        for q in sorted_labels:
             df_q = df_quantiles[df_quantiles["Quantile"] == q]
-            ax.plot(df_q["Cycles to Failure"], df_q["Stress Range"], label=f"q = {q:.3f}", lw=2)
+            if isinstance(q, (float, int)) or str(q).replace('.', '', 1).isdigit():
+                label = f"q = {float(q):.3f}"
+            else:
+                label = str(q)
+            ax.plot(df_q["Cycles to Failure"], df_q["Stress Range"], label=label, lw=2)
 
         if df_exp is not None:
             failures = df_exp[df_exp["Runout"] == 0]
@@ -81,8 +118,8 @@ class RFLMQuantileModel:
         ax.set_yscale("log")
         ax.set_xlabel("Cycles to Failure (N)")
         ax.set_ylabel("Stress Range (ΔS)")
-        ax.set_title("Extended Quantile SN-Curves with Experimental Data (RFLM)")
-        ax.legend(title="Quantile / Data", loc="best", fontsize='small')
+        ax.set_title("Quantile & RFLM SN-Curves with Experimental Data")
+        ax.legend(title="Legend", loc="best", fontsize='small')
         ax.grid(True, which="both", linestyle='--', alpha=0.5)
         if nlim is not None:
             ax.set_xlim(nlim)
