@@ -14,7 +14,7 @@ class RFLMGeneralModel:
         self.gamma = np.exp(self.μ_γ)  # expected fatigue limit in stress units
         self.EPS = 1e-300
 
-    def compute_sn_curve(self, ΔS_min=None, ΔS_max=None, npts=300):
+    def compute_sn_curve(self, ΔS_min=None, ΔS_max=None, npts=40):
         # Apply defaults if user does not provide limits
         if ΔS_min is None:
             ΔS_min = max(self.gamma + 1e-3, 50)
