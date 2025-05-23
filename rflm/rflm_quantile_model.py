@@ -15,9 +15,9 @@ class RFLMGeneralModel:
         self.EPS = 1e-300
 
     def compute_sn_curve(self, ΔS_min=None, ΔS_max=None, npts=40):
-        # Apply defaults if user does not provide limits
+        # Strict default values when not provided
         if ΔS_min is None:
-            ΔS_min = max(self.gamma + 1e-3, 50)
+            ΔS_min = 40
         if ΔS_max is None:
             ΔS_max = 300
 
@@ -26,7 +26,8 @@ class RFLMGeneralModel:
         N = np.exp(logN)
         return N, ΔS
 
-    def to_dataframe(self, ΔS_min=None, ΔS_max=None, npts=300):
+
+    def to_dataframe(self, ΔS_min=None, ΔS_max=None, npts=40):
         N, ΔS = self.compute_sn_curve(ΔS_min=ΔS_min, ΔS_max=ΔS_max, npts=npts)
         return pd.DataFrame({
             "Quantile": ["RFLM"] * len(N),
