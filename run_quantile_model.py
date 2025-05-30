@@ -47,7 +47,7 @@ def main():
 
     # === Compute general SN model curve ===
     general_model = RFLMGeneralModel(θ)
-    N_gen, S_gen = general_model.compute_sn_curve(ΔS_max=args.slim[1] if args.slim else 450)
+    N_gen, S_gen = general_model.compute_sn_curve(ΔS_max=args.slim[1] if args.slim else 300)
     df_general = pd.DataFrame({"Quantile": ["RFLM"]*len(N_gen), "Stress Range": S_gen, "Cycles to Failure": N_gen})
 
     # === Merge and Save ===

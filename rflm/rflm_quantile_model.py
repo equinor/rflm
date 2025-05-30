@@ -119,7 +119,11 @@ class RFLMQuantileModel:
         ax.set_yscale("log")
         ax.set_xlabel("Cycles to Failure (N)")
         ax.set_ylabel("Stress Range (ΔS)")
-        ax.set_title("Quantile & RFLM SN-Curves with Experimental Data")
+        title_str = (
+            f"RFLM SN-Curves | β₀={self.β0:.3f}, β₁={self.β1:.3f}, σ={self.σ:.3f}, "
+            f"μ_γ={self.μ_γ:.3f}, σ_γ={self.σ_γ:.3f}"
+        )
+        ax.set_title(title_str)
         ax.legend(title="Legend", loc="best", fontsize='small')
         ax.grid(True, which="both", linestyle='--', alpha=0.5)
         if nlim is not None:
