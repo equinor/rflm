@@ -473,8 +473,8 @@ class RFLM5():
         β0, β1, γ_best = best_guess
         a, m = np.exp(β0), -β1
         σ = np.mean((w_data - β0 - β1 * np.log(ΔS - γ_best)) ** 2)
-        μ_γ = np.mean(np.log(ΔS[δ == 0]))
-        σ_γ = np.std(np.log(ΔS[δ == 0]))
+        μ_γ = np.mean(np.log(ΔS[δ == 0]))  # Non-runout data
+        σ_γ = np.std(np.log(ΔS[δ == 0]))   # Non-runout data
         σ_γ = max(σ_γ, 0.05)
 
         θ_guess = [β0, β1, σ, μ_γ, σ_γ]    
