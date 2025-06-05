@@ -448,27 +448,61 @@ class RFLM5():
         x_data = np.log(ΔS)
         w_data = np.log(N)
 
-        # establish an initial guess
-        β_guess = np.array([10, -3 if m is None else -m])
+        # === New robust loop for γ-based initial guess ===
+        γ_candidates = np.linspace(min(ΔS) * 0.9, min(ΔS) * 1.05, 5)
+        best_r2 = -np.inf
+        best_guess = None
 
-        # Set a array for the fixed parameters. In the current code
-        # only m (the slope of the SN-curve) can be fixed. This is 
-        # always at index 1 in the optimization routine. 
-        fixed_indices = [] if m is None else [1]
-        fixed_values = [] if m is None else [-m]
-        free_values = np.delete(β_guess, fixed_indices)
+        for γ in γ_candidates:
+            ΔS_shifted = ΔS - γ
+            if np.any(ΔS_shifted <= 0):
+                continue  # invalid guess
+            x_shifted = np.log(ΔS_shifted)
+            try:
+                β1, β0 = np.polyfit(x_shifted, np.log(N), 1)
+                w_pred = β0 + β1 * x_shifted
+                ss_res = np.sum((np.log(N) - w_pred)**2)
+                ss_tot = np.sum((np.log(N) - np.mean(np.log(N)))**2)
+                r2 = 1 - ss_res / ss_tot
+                if r2 > best_r2:
+                    best_r2 = r2
+                    best_guess = (β0, β1, γ)
+            except:
+                continue
 
-        # make an initial guess of the parameters based on an LSQ fit
-        res = least_squares(optimize_wrapper, free_values, 
-                       args=(fixed_values, fixed_indices, lambda β, x, w: w - β[0] - β[1]*x, x_data, w_data))
-        result = res.x if m is None else np.insert(res.x, fixed_indices, fixed_values)   
-        β0, β1 = result
+        β0, β1, γ_best = best_guess
         a, m = np.exp(β0), -β1
-        σ = np.mean((w_data - β0 - β1*x_data)**2)
-        μ_γ = 1.0 
-        σ_γ = 0.2 
+        σ = np.mean((w_data - β0 - β1 * np.log(ΔS - γ_best)) ** 2)
+        μ_γ = np.mean(np.log(ΔS[δ == 1]))  # Non-runout data
+        σ_γ = np.std(np.log(ΔS[δ == 1]))   # Non-runout data
+        σ_γ = max(σ_γ, 0.05)
+
         θ_guess = [β0, β1, σ, μ_γ, σ_γ]    
-        print(f"Initial guess for θ params: β0={β0:.2f}, β1={β1:.2f}, σ={σ:.2f}, μ_γ={μ_γ:.2f}, σ_γ={σ_γ:.2f}")
+        print(f"Initial guess for θ params: β0={β0:.2f}, β1={β1:.2f}, σ={σ:.2f}, μ_γ={μ_γ:.2f}, σ_γ={σ_γ:.2f}, R²={best_r2:.4f}")
+        print(f"✅ R² of initial OLS fit (with γ={γ_best:.2f}): {best_r2:.4f}")
+    
+        # === Plot the initial OLS fit ===
+        x_shifted = np.log(ΔS - γ_best)
+        w_fit = β0 + β1 * x_shifted
+
+        plt.figure(figsize=(6, 4))
+        plt.scatter(w_data, x_shifted, label='Data (log(N))')
+        plt.plot(w_fit, x_shifted, color='red', label='Initial Fit')
+        plt.ylabel("log(ΔS - γ)")
+        plt.xlabel("log(N)")
+        plt.title(f"Initial Fit: R² = {best_r2:.4f}")
+        plt.grid(True, linestyle='--', alpha=0.5)
+        plt.legend()
+        plt.tight_layout()
+
+        # Save and show
+        filename = f"init_fit.png"
+        plt.savefig(filename, dpi=300)
+        print(f"📊 Initial fit figure saved as '{filename}'")
+        plt.show()
+
+
+
     
         # (negative) log-likelihood function for minimization
         def negative_log_likelihood_function(θ, w, x, δ):
@@ -496,6 +530,8 @@ class RFLM5():
         bounds = [(0,np.inf), (-np.inf,0), (None,None), (0, np.inf), (0, np.inf)]
 
         # Now handle fixed parameters for the main optimization
+        fixed_indices = [] if m is None else [1]
+        fixed_values = [] if m is None else [-m]
         free_values = np.delete(θ_guess, fixed_indices)
         adjusted_constraints = adjust_constraints(constraints, fixed_indices, fixed_values)   
 

@@ -1,7 +1,7 @@
 import argparse
 import os
 import pandas as pd
-from rflm import RFLMQuantileModel
+from rflm import RFLMQuantileModel, RFLMGeneralModel
 
 def main():
     parser = argparse.ArgumentParser(description="Compute and plot quantile SN-curves using RFLM.")
@@ -31,7 +31,7 @@ def main():
     df_exp["Cycles"] = pd.to_numeric(df_exp["Cycles"], errors='coerce')
     df_exp["Runout"] = pd.to_numeric(df_exp["Runout"], errors='coerce')
 
-    # === Run model ===
+    # === Run quantile model ===
     model = RFLMQuantileModel(θ)
     if args.slim:
         ΔS_min, ΔS_max = args.slim
@@ -45,16 +45,22 @@ def main():
         df_exp=df_exp
     )
 
-    # === Output filenames ===
+    # === Compute general SN model curve ===
+    general_model = RFLMGeneralModel(θ)
+    N_gen, S_gen = general_model.compute_sn_curve(ΔS_max=args.slim[1] if args.slim else 300)
+    df_general = pd.DataFrame({"Quantile": ["RFLM"]*len(N_gen), "Stress Range": S_gen, "Cycles to Failure": N_gen})
+
+    # === Merge and Save ===
+    df_combined = pd.concat([df_quantiles, df_general], ignore_index=True)
     base_name = os.path.splitext(os.path.basename(args.input))[0]
-    output_excel = f"{base_name}_Quantiles.xlsx"
-    output_plot = f"{base_name}_Quantiles.png"
+    output_excel = f"{base_name}_Quantiles+General.xlsx"
+    output_plot = f"{base_name}_Quantiles+General.png"
+    df_combined.to_excel(output_excel, index=False)
 
-    # === Save results ===
-    df_quantiles.to_excel(output_excel, index=False)
-    model.plot(df_quantiles, df_exp=df_exp, filename=output_plot, nlim=args.nlim)
+    # === Plot ===
+    model.plot(df_combined, df_exp=df_exp, filename=output_plot, nlim=args.nlim)
 
-    print(f"✅ Quantile curves saved to '{output_excel}'")
+    print(f"✅ Quantile + general curves saved to '{output_excel}'")
     print(f"📊 Plot saved to '{output_plot}'")
 
 if __name__ == "__main__":
