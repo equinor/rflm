@@ -6,7 +6,7 @@ setup(
     packages=find_packages(),
     install_requires=[
         'numpy',
-        'scipy',
+        'scipy==1.15.2',
         'matplotlib',
         'pandas',
         'openpyxl',
